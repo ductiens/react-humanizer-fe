@@ -8,6 +8,7 @@ export const useHumanize = () => {
   const [progress, setProgress] = useState(0);
   const [streamText, setStreamText] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [hasStarted, setHasStarted] = useState(false);
   const store = useAppStore();
 
   const humanize = async () => {
@@ -20,6 +21,7 @@ export const useHumanize = () => {
     setProgress(0);
     setStreamText('');
     setError(null);
+    setHasStarted(true);
     store.clearResult();
 
     try {
@@ -27,7 +29,8 @@ export const useHumanize = () => {
       let headers: any = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const response = await fetch(`${API_BASE_URL}/humanize/stream`, {
+      const cleanBaseUrl = API_BASE_URL.replace(/\/+$/, '');
+      const response = await fetch(`${cleanBaseUrl}/humanize/stream`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -103,5 +106,5 @@ export const useHumanize = () => {
     }
   };
 
-  return { humanize, downloadDocx, isLoading, progress, streamText, error };
+  return { humanize, downloadDocx, isLoading, progress, streamText, error, hasStarted };
 };

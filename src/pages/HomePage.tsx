@@ -80,8 +80,8 @@ const HomePage = () => {
         <AnalysisPanel isProcessing={isLoading} progress={progress} downloadAction={downloadDocx} />
       </div>
 
-      {/* Show Diff View below ONLY if we have streaming result or finalized result string */}
-      {((isLoading && streamText) || result) && (
+      {/* Show Diff View below as soon as loading starts or we have a result */}
+      {(isLoading || result) && (
          <div style={{ marginTop: '2rem' }}>
             <h3 style={{ borderBottom: '1px solid var(--border-light)', paddingBottom: '0.5rem' }}>Live Comparison</h3>
             <DiffView original={inputText} humanized={result ? result.humanized_text : streamText} />

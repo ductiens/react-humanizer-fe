@@ -107,6 +107,10 @@ export const useHumanize = () => {
 
   const downloadDocx = async (historyId: string) => {
     try {
+      if (!historyId) {
+        alert("Lỗi: Không thể tải file. Văn bản chưa được lưu vào Database (Có thể do lỗi mạng hoặc cấu hình DB).");
+        return;
+      }
       await humanizeService.downloadDocx(historyId, `ai-humanized-${historyId.slice(-6)}.docx`);
     } catch (err) {
       console.error("Failed to download document:", err);

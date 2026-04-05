@@ -69,24 +69,31 @@ export const useHumanize = () => {
 
         for (const event of events) {
           if (event.startsWith("data: ")) {
+            const raw = event.substring(6).trim();
+            if (!raw) continue;
+            let data: any;
             try {
-              const data = JSON.parse(event.substring(6));
-              if (data.type === "progress") setProgress(data.progress);
-              if (data.type === "chunk") {
-                streamData += (streamData ? "\n\n" : "") + data.text;
-                setStreamText(streamData);
-              }
-              if (data.type === "complete") {
-                store.setResult({
-                  original_text: store.inputText,
-                  humanized_text: data.humanized_text,
-                  history_id: data.history_id,
-                });
-                setProgress(100);
-              }
-              if (data.type === "error") throw new Error(data.detail);
-            } catch (e) {
-              console.error("Failed to parse SSE event:", e);
+              data = JSON.parse(raw);
+            } catch {
+              // Non-JSON SSE data (e.g. RetryError string from tenacity) - log and skip
+              console.warn("Skipping non-JSON SSE chunk:", raw.substring(0, 120));
+              continue;
+            }
+            if (data.type === "progress") setProgress(data.progress);
+            if (data.type === "chunk") {
+              streamData += (streamData ? "\n\n" : "") + data.text;
+              setStreamText(streamData);
+            }
+            if (data.type === "complete") {
+              store.setResult({
+                original_text: store.inputText,
+                humanized_text: data.humanized_text,
+                history_id: data.history_id,
+              });
+              setProgress(100);
+            }
+            if (data.type === "error") {
+              throw new Error(data.detail || "Server error");
             }
           }
         }

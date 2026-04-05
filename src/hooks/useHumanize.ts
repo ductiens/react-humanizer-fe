@@ -39,22 +39,34 @@ export const useHumanize = () => {
         }),
       });
 
-      if (!response.body) throw new Error("No body returned");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Server responded with ${response.status}`);
+      }
+
+      if (!response.body) {
+        throw new Error('No response body received from the server');
+      }
+
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let streamData = '';
+      let leftover = ''; // Buffer for fragmented chunks
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        const chunkStr = decoder.decode(value, { stream: true });
         
-        // Split by SSE double newline
-        const lines = chunkStr.split('\n\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
+        const chunkStr = leftover + decoder.decode(value, { stream: true });
+        const events = chunkStr.split('\n\n');
+        
+        // The last element might be incomplete; save it for the next read
+        leftover = events.pop() || '';
+
+        for (const event of events) {
+          if (event.startsWith('data: ')) {
             try {
-              const data = JSON.parse(line.substring(6));
+              const data = JSON.parse(event.substring(6));
               if (data.type === 'progress') setProgress(data.progress);
               if (data.type === 'chunk') {
                 streamData += (streamData ? '\n\n' : '') + data.text;
@@ -66,11 +78,12 @@ export const useHumanize = () => {
                     humanized_text: data.humanized_text,
                     history_id: data.history_id
                  });
-                 // 100% just in case
                  setProgress(100);
               }
               if (data.type === 'error') throw new Error(data.detail);
-            } catch (e) { }
+            } catch (e) {
+              console.error("Failed to parse SSE event:", e);
+            }
           }
         }
       }
